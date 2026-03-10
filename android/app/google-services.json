@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "33869572673",
+    "project_id": "health-app-b51cf",
+    "storage_bucket": "health-app-b51cf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:33869572673:android:f5acfb589ee9268ab9b4c0",
+        "android_client_info": {
+          "package_name": "com.example.muj_krokomer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAjVRZrJX9w7DNIrnOdxoEPP4ZlbzWRxrg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
