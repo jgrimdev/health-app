@@ -52,4 +52,38 @@ class DatabaseService {
     }
     return 0; // Pokud pro daný den nic není, vrátí nulu
   }
+
+// --- GAMIFIKACE: Výpočet Streaku (Dny v řadě) ---
+  Future<int> spocitejStreak(int denniCil) async {
+    int streak = 0;
+    // Půjdeme do minulosti (den po dni, max 1000 dní)
+    for (int i = 0; i < 1000; i++) {
+      String den = DateTime.now().subtract(Duration(days: i)).toString().substring(0, 10);
+      int kroky = await nactiKrokyProDatum(den);
+      
+      if (kroky >= denniCil) {
+        streak++; // Cíl splněn, přidáme den
+      } else {
+        if (i == 0) {
+          // Dnes jsi ještě nesplnil cíl? To nevadí, streak se nepřeruší, dokud nezkontrolujeme včerejšek
+          continue;
+        } else {
+          // Včera (nebo dřív) jsi cíl nesplnil -> Streak končí
+          break;
+        }
+      }
+    }
+    return streak;
+  }
+
+  // --- GAMIFIKACE: Celkový součet kroků za celou historii ---
+  Future<int> spocitejCelkoveKroky() async {
+    final db = await instance.database;
+    final result = await db.rawQuery('SELECT SUM(kroky) as total FROM historie');
+    if (result.isNotEmpty && result.first['total'] != null) {
+      return result.first['total'] as int;
+    }
+    return 0;
+  }
+
 }

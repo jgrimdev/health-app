@@ -6,6 +6,7 @@ import 'package:flutter_background_service/flutter_background_service.dart';
 // Tady natahujeme ty naše nové rozsekané soubory!
 import 'home_screen.dart';
 import 'history_screen.dart';
+import 'achievements_screen.dart'; // 👈 NOVÝ IMPORT PRO GAMIFIKACI
 import 'settings_screen.dart';
 
 class HlavniNavigace extends StatefulWidget {
@@ -63,10 +64,11 @@ class _HlavniNavigaceState extends State<HlavniNavigace> {
 
   @override
   Widget build(BuildContext context) {
-    // Tady posíláme data do jednotlivých obrazovek
+    // Tady posíláme data do jednotlivých 4 obrazovek
     final List<Widget> obrazovky = [
       DomuObrazovka(kroky: _dnesniKroky, vyska: _vyska, cil: _cil),
       HistorieObrazovka(cil: _cil),
+      UspechyObrazovka(cil: _cil), // 👈 PŘIDÁNA NOVÁ OBRAZOVKA
       NastaveniObrazovka(
         vyska: _vyska,
         cil: _cil,
@@ -81,14 +83,15 @@ class _HlavniNavigaceState extends State<HlavniNavigace> {
         elevation: 0,
       ),
       body: SafeArea(child: obrazovky[_aktualniZalozka]),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _aktualniZalozka,
-        onTap: (index) => setState(() => _aktualniZalozka = index),
-        selectedItemColor: Colors.greenAccent,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Domů'),
-          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Historie'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Nastavení'),
+      // ✨ MODERNÍ NAVIGATION BAR (Material 3) ✨
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _aktualniZalozka,
+        onDestinationSelected: (index) => setState(() => _aktualniZalozka = index),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Dnes'),
+          NavigationDestination(icon: Icon(Icons.bar_chart_outlined), selectedIcon: Icon(Icons.bar_chart), label: 'Historie'),
+          NavigationDestination(icon: Icon(Icons.emoji_events_outlined), selectedIcon: Icon(Icons.emoji_events), label: 'Úspěchy'),
+          NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: 'Nastavení'),
         ],
       ),
     );

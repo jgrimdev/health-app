@@ -16,11 +16,12 @@ class NastaveniObrazovka extends StatefulWidget {
 class _NastaveniObrazovkaState extends State<NastaveniObrazovka> {
   late double _nastavenaVyska;
   late double _nastavenyCil;
-  
   String _vybranyJazyk = 'cs'; 
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _hesloController = TextEditingController();
+  
+  bool _stahujeSe = false; // Ukazatel načítání pro synchronizaci
 
   @override
   void initState() {
@@ -29,11 +30,17 @@ class _NastaveniObrazovkaState extends State<NastaveniObrazovka> {
     _nastavenyCil = widget.cil.toDouble();
   }
 
-  void _zpracujVysledekPrihlaseni(String? chyba) {
+  void _zpracujVysledekPrihlaseni(String? chyba) async {
     if (!mounted) return;
     if (chyba == null) {
-      setState(() {});
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Záloha aktivní!'), backgroundColor: Colors.green));
+      // ⬇️ TADY SE SPOUŠTÍ SYNCHRONIZACE Z CLOUDU! ⬇️
+      setState(() => _stahujeSe = true);
+      await FirebaseService.stahnoutHistoriiZCloudu();
+      
+      if (!mounted) return;
+      setState(() => _stahujeSe = false);
+      
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Přihlášeno a data synchronizována!'), backgroundColor: Colors.green));
     } else {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(chyba), backgroundColor: Colors.redAccent));
     }
@@ -48,20 +55,10 @@ class _NastaveniObrazovkaState extends State<NastaveniObrazovka> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Zadej e-mail a heslo. Pokud účet nemáš, automaticky tě zaregistrujeme.', style: TextStyle(fontSize: 12, color: Colors.grey)),
+              const Text('Zadej e-mail a heslo.', style: TextStyle(fontSize: 12, color: Colors.grey)),
               const SizedBox(height: 10),
-              TextField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                autofillHints: const [AutofillHints.email],
-                decoration: const InputDecoration(labelText: 'E-mail'),
-              ),
-              TextField(
-                controller: _hesloController,
-                obscureText: true,
-                autofillHints: const [AutofillHints.password],
-                decoration: const InputDecoration(labelText: 'Heslo'),
-              ),
+              TextField(controller: _emailController, keyboardType: TextInputType.emailAddress, autofillHints: const [AutofillHints.email], decoration: const InputDecoration(labelText: 'E-mail')),
+              TextField(controller: _hesloController, obscureText: true, autofillHints: const [AutofillHints.password], decoration: const InputDecoration(labelText: 'Heslo')),
             ],
           ),
         ),
@@ -75,24 +72,27 @@ class _NastaveniObrazovkaState extends State<NastaveniObrazovka> {
               Navigator.pop(dialogContext);
               _zpracujVysledekPrihlaseni(chyba); 
             },
-            child: const Text('Přihlásit / Registrovat'),
+            child: const Text('Přihlásit'),
           )
         ],
       ),
     );
   }
 
-  // Pomocný widget pro moderní karty
-  Widget _buildModernCard({required String titulek, required String hodnota, required Widget slider}) {
+  // ✨ NOVÁ, MINIMALISTICKÁ KARTA ✨
+  Widget _buildMinimalCard({required String titulek, required String hodnota, required Widget slider}) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 15),
-      decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(20)),
+      padding: const EdgeInsets.only(top: 15, left: 15, right: 15, bottom: 5),
+      decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(15)),
       child: Column(
         children: [
-          Text(titulek, style: const TextStyle(fontSize: 16, color: Colors.grey)),
-          const SizedBox(height: 5),
-          Text(hodnota, style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.greenAccent)),
-          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(titulek, style: const TextStyle(fontSize: 16, color: Colors.white70)),
+              Text(hodnota, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.greenAccent)),
+            ],
+          ),
           slider,
         ],
       ),
@@ -108,10 +108,9 @@ class _NastaveniObrazovkaState extends State<NastaveniObrazovka> {
       child: ListView(
         children: [
           const Text('Nastavení', style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 30),
+          const SizedBox(height: 20),
 
-          // --- 1. VÝŠKA ---
-          _buildModernCard(
+          _buildMinimalCard(
             titulek: 'Tvoje výška',
             hodnota: '${_nastavenaVyska.toInt()} cm',
             slider: Slider(
@@ -122,10 +121,9 @@ class _NastaveniObrazovkaState extends State<NastaveniObrazovka> {
               },
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 15),
 
-          // --- 2. CÍL KROKŮ ---
-          _buildModernCard(
+          _buildMinimalCard(
             titulek: 'Denní cíl',
             hodnota: '${_nastavenyCil.toInt()}',
             slider: Slider(
@@ -136,48 +134,31 @@ class _NastaveniObrazovkaState extends State<NastaveniObrazovka> {
               },
             ),
           ),
-          const SizedBox(height: 30),
+          const SizedBox(height: 15),
 
-          // --- 3. JAZYK ---
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(20)),
+            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+            decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(15)),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Row(
-                  children: [
-                    Icon(Icons.language, color: Colors.white70),
-                    SizedBox(width: 15),
-                    Text('Jazyk aplikace', style: TextStyle(fontSize: 16)),
-                  ],
-                ),
+                const Row(children: [Icon(Icons.language, color: Colors.white70, size: 20), SizedBox(width: 10), Text('Jazyk', style: TextStyle(fontSize: 16))]),
                 DropdownButton<String>(
-                  value: _vybranyJazyk,
-                  dropdownColor: Colors.grey[900],
-                  underline: const SizedBox(), 
-                  items: const [
-                    DropdownMenuItem(value: 'cs', child: Text('🇨🇿 CZ')),
-                    DropdownMenuItem(value: 'en', child: Text('🇬🇧 EN')),
-                  ],
-                  onChanged: (String? novaHodnota) {
-                    if (novaHodnota != null) {
-                      setState(() => _vybranyJazyk = novaHodnota);
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Překlady brzy přidáme!')));
-                    }
-                  },
+                  value: _vybranyJazyk, dropdownColor: Colors.grey[900], underline: const SizedBox(),
+                  items: const [DropdownMenuItem(value: 'cs', child: Text('🇨🇿 CZ')), DropdownMenuItem(value: 'en', child: Text('🇬🇧 EN'))],
+                  onChanged: (val) { if (val != null) setState(() => _vybranyJazyk = val); },
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 30),
 
-          // --- 4. ZÁLOHA DO CLOUDU (Nejvíc dole) ---
+          // KARTA ZÁLOHY S INDIKÁTOREM NAČÍTÁNÍ
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: jePrihlasen ? Colors.greenAccent.withValues(alpha: 0.1) : Colors.white10, 
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(15),
               border: Border.all(color: jePrihlasen ? Colors.greenAccent.withValues(alpha: 0.3) : Colors.transparent)
             ),
             child: Column(
@@ -187,40 +168,24 @@ class _NastaveniObrazovkaState extends State<NastaveniObrazovka> {
                   children: [
                     Icon(jePrihlasen ? Icons.cloud_done : Icons.cloud_off, color: jePrihlasen ? Colors.greenAccent : Colors.grey),
                     const SizedBox(width: 10),
-                    const Text('Cloudová záloha', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const Text('Záloha', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const Spacer(),
+                    if (_stahujeSe) const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
                   ],
                 ),
                 const SizedBox(height: 10),
                 if (jePrihlasen) ...[
-                  Text('Záloha probíhá na účet:\n${FirebaseService.currentUser!.email}', style: const TextStyle(color: Colors.white70)),
+                  Text('${FirebaseService.currentUser!.email}', style: const TextStyle(color: Colors.white70)),
                   const SizedBox(height: 15),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: () async {
-                        await FirebaseService.odhlasit();
-                        if (mounted) setState(() {});
-                      },
-                      style: OutlinedButton.styleFrom(foregroundColor: Colors.redAccent, side: const BorderSide(color: Colors.redAccent)),
-                      child: const Text('Odhlásit se'),
-                    ),
-                  )
+                  SizedBox(width: double.infinity, child: OutlinedButton(onPressed: () async { await FirebaseService.odhlasit(); if (mounted) setState(() {}); }, style: OutlinedButton.styleFrom(foregroundColor: Colors.redAccent, side: const BorderSide(color: Colors.redAccent)), child: const Text('Odhlásit se')))
                 ] else ...[
-                  const Text('Tvá data se neukládají do cloudu.', style: TextStyle(color: Colors.grey)),
+                  const Text('Tvá data se neukládají do cloudu.', style: TextStyle(color: Colors.grey, fontSize: 12)),
                   const SizedBox(height: 15),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _ukazEmailDialog, 
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.greenAccent, foregroundColor: Colors.black),
-                      child: const Text('Zapnout zálohu'),
-                    ),
-                  )
+                  SizedBox(width: double.infinity, child: ElevatedButton(onPressed: _ukazEmailDialog, style: ElevatedButton.styleFrom(backgroundColor: Colors.greenAccent, foregroundColor: Colors.black), child: const Text('Zapnout zálohu')))
                 ]
               ],
             ),
           ),
-          const SizedBox(height: 40),
         ],
       ),
     );
